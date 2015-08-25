@@ -1,0 +1,12 @@
+body{ background:url(../images/login_bg.gif); padding:0; margin:0; font-size:14px; color:#1e1e1e}
+a{ color:#393939; font-weight:bolder}
+#login{ width:445px; height:445px; margin:0 auto; padding-top:109px}
+#login_login{ background:url(../images/login_bg_01.gif) no-repeat; height:200px; padding-top:69px; padding-left:20px; padding-right:20px; *padding-top:80px}
+#login_bg{ background:url(../images/login_bg_02.gif) 5px no-repeat; height:140px; *margin-top:-12px}
+#login_input{ height:30px; line-height:30px; margin-top:10px; padding:0px 30px}
+#login_input_l{ float:left; text-align:right; width:100px}
+#login_input_r{ width:230px; padding-left:10px; float:left}
+#login_input_r input{ height:20px; border:#4d4d4d 1px solid; line-height:20px}
+#login_input_yz{ width:80px;padding-left:10px; float:left}
+#login_input_yz input{ height:20px; border:#4d4d4d 1px solid; line-height:20px}
+#login_input_btn{ width:203px;padding-top:10px; padding-left:103px}

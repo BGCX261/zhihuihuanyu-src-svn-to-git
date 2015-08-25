@@ -1,0 +1,350 @@
+1. to-do list
+
+	o - 设置服务器时间
+	首先使用 date 命令(“date MMDDhhmmYYYY.ss”) 设置好系统时钟，
+	然后使用 “/sbin/hwclock -–systohc” 把硬件时钟设置为和当前系统时间一致。
+	/sbin/hwclock  -r 可以显示硬件时钟
+	
+	o iptables必须认真规划
+	
+	o selinux必须使用。但注意对ftp、apache、php的影响。
+	
+	o - 申请 google-code： zhihuhuanyu@163.com
+
+	o - 安装服务器上的软件
+
+	o - 设计 db 结构
+
+	o - 开发web页面
+
+	o - 部署短信平台后台系统 = smsd+cronphp+httpd对外的路由接口
+	
+	o - 系统安全性
+		iptables:?
+		ssh: root-no-login, port 22 --> 6932, 注意别让iptables给限制了6932的访问。-ok
+		apache-web: no-list, 不允许爬虫访问。
+		ftp:
+		smsd: 只允许本地访问
+		
+	o - rc.local
+	
+	o - 将来，安装 redis，用于：
+		路由接口生成rpcid
+		关键字
+		号段表。
+		日月限制。
+		from <--> channel_list 对应关系。路由接口使用该关系，提交到不同的smsd。
+			即某个from可以用哪些通道下发，下发的比率是多少。from=>array('cm'=>'channel_1', 'cu'=>'channel_2', 'cu'=>'channel_3')
+			目前，路由使用 conf.php手动配置。
+			
+	o sms_plat web:
+		o access.php: acl_check!
+		o from: [50000, 99999]. 1****->3****易与gateway参数混淆，故不使用。4****不好听。
+			from不能重用。因为账单里含from，不允许新老项目使用同一个from。
+		o url do not show: index.php? - 需要修改AllowOverride=ALL，这会引发安全问题。故不修改了。
+		o php.ini -> upload_max_filesize = 10M
+		o 群发申请时，对于输入的mt内容长度，需要进行判断。
+		o 用户有可能提交群发txt后，预付费余额不足以支持本txt的群发，但由于我的路由没有资费时时处理，故该txt仍
+			会全部提交给gateway。导致每天出账单时，用户的预付费子账户余额为负数。故pre/post-account_fee should be int, not unit.
+		o is_admin()的判断，需要支持公司内部用户。 - ok
+	
+	o route: send_sms.php:
+		o 检查该号码是否在通道的限制下发的地区中
+		o 确认smsd的linkid字段最大能写64个字符？ - 至少 100个字符是ok的。
+			http://122.0.67.155:8612/mo?/101001/15801564398/10668888/test/1111111111222222222233333333334444444444555555555566666666667777777777888888888899999999991111111111
+			
+
+2. 系统结构
+
+	o - db = RSLOG, sms_plat, smsdweb
+
+	o - 基础软件 = apache 2.2.24, ftp, smsd, mysql, php
+
+	o - 部署平台 = 短信平台web页面， PRSlog入库平台，cron平台，smsd平台-含web编辑界面。
+	
+	o - 安装目录: 参看 architecture.
+
+	o - create nologin user: gateway, smsd. - ok.
+
+3. 服务器安装记录
+	yum install -y man
+	yum install -y subversion
+	yum install -y mlocate
+	yum install -y bind-utils  // for nslookup
+	yum install -y gcc
+	yum install -y make
+	yum install -y vsftpd
+	yum install -y lsof
+	yum install -y tcpdump
+	yum install -y libtool	
+	
+	// for mysql5.6
+	yum install -y gcc gcc-c++ gcc-g77 autoconf automake zlib* fiex* libxml* ncurses-devel libmcrypt* libtool-ltdl-devel* make cmake unzip
+	
+	// for php5.4
+	yum install -y freetype gd libjpeg* libpng*
+
+4. ssh 安全配置
+	查看ssh攻击：
+	grep "Failed password for root"  /var/log/secure | awk '{print $11}' | sort | uniq -c | sort -nr
+	
+	port 22 --> 6932, 注意别让iptables给限制了6932的访问的处理方式：
+	iptables打开 6932 端口
+	vi /etc/sysconfig/iptables, edit:
+	# Firewall configuration written by system-config-firewall
+	# Manual customization of this file is not recommended.
+	*filter
+	:INPUT ACCEPT [0:0]
+	:FORWARD ACCEPT [0:0]
+	:OUTPUT ACCEPT [0:0]
+	-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+	-A INPUT -p icmp -j ACCEPT
+	-A INPUT -i lo -j ACCEPT
+	-A INPUT -m state --state NEW -m tcp -p tcp --dport 6932 -j ACCEPT
+	-A INPUT -j REJECT --reject-with icmp-host-prohibited
+	-A FORWARD -j REJECT --reject-with icmp-host-prohibited
+	COMMIT
+
+	ssh改为 6932端口
+	
+	vi /etc/ssh/sshd_config
+	Port 6932
+	LoginGraceTime 20
+	MaxAuthTries 10
+	PermitRootLogin no
+	UsePAM yes	
+		
+	vi /etc/pam.d/sshd, edit:
+	#%PAM-1.0
+	auth       required     pam_sepermit.so
+	auth       include      password-auth
+	account    required     pam_nologin.so
+	account    required     pam_access.so	
+	account    include      password-auth
+	password   include      password-auth
+	# pam_selinux.so close should be the first session rule
+	session    required     pam_selinux.so close
+	session    required     pam_loginuid.so
+	# pam_selinux.so open should only be followed by sessions to be executed in the user context
+	session    required     pam_selinux.so open env_params
+	session    optional     pam_keyinit.so force revoke
+	session    include      password-auth
+	其中，
+	account 处理账户限制。对于有效的用户，允许他做什么。
+	auth 处理用户识别 — 例如，通过输入用户名和密码。
+	password 只处理与密码相关的问题，比如设置新密码。
+	session 处理连接管理，包括日志记录。
+
+	重启服务
+	service iptables restart
+	/etc/init.d/sshd restart
+	
+	通过 6932 端口 ssh登陆。发现ok了。则可以把 iptables 里的 22端口配置信息删除：
+	-A INPUT -m state --state NEW -m tcp -p tcp --dport 22 -j DROP
+	
+	让root无法ssh login
+	visudo, add:
+	User_Alias ADMINS = gumm
+	ADMINS  ALL=(ALL)       NOPASSWD: ALL
+	
+	vi /etc/passwd, edit:
+	root:x:0:0:root:/root:/sbin/nologin
+	
+	vi /etc/security/access.conf, edit:
+	+ : gumm : ALL
+	+ : root : 127.0.0.1
+	// - : root : ALL // 这行不能用。因为会限制root对cron的使用 
+	
+5. ftp 设置
+	vi /etc/vsftpd/vsftpd.conf, add:
+	anonymous_enable=NO
+	chroot_local_user=YES
+	chroot_list_enable=NO
+	max_per_ip=5
+	userlist_deny=NO
+	listen_port=6933
+	pasv_enable=YES
+	pasv_min_port=5001
+	pasv_max_port=5010
+	#pasv_promiscuous=YES // 此选项激活时，将关闭PASV模式的安全检查。
+	//该检查确保数据连接和控制连接是来自同一个IP地址。小心打开此选项。此选项唯一合理的用法是存在于由安全隧道方案构成的组织中。默认值为NO。
+	
+	change /etc/vsfptd/user_list+ftpusers
+	由于我只允许用户在自己home下操作，不能cd到系统目录，而我想共享的目录为/data2/ftp.data/
+	故，无法使用gumm系统用户了。因为gumm的home是 /home/gumm, not /data2/ftp.data
+	so, create another gummftp, for : adduser -d /data2/ftp.data -g ftp -s /sbin/nologin gummftp
+	then, passwd gummftp
+	
+	若gummftp无法上传文件，报错：553 Could not create file
+	可能是selinux的问题：
+	getsebool -a | grep ftp 发现allow_ftpd_full_access–>off 
+	则， setsebool allow_ftpd_full_access 1 即修复上传问题。
+	
+	then, /etc/rc.d/init.d/vsftpd restart
+	
+	vi /etc/sysconfig/iptables, add:
+	-A INPUT -m state --state NEW -m tcp -p tcp --dport 6933 -j ACCEPT
+	-A INPUT -p tcp -m multiport --dport 5001:5010 -j ACCEPT
+	then, service iptables restart
+	
+	设置本地的cuteftp，不上传 .svn文件：
+	o 属性 - 操作 - 筛选器
+	o 筛选器属性：选择启用、对文件夹名筛选、应用到文件传输
+	o 筛选非掩码- 添加.svn
+
+6. mysql install:
+	http://database.51cto.com/art/201304/388452.htm
+	http://www.cnblogs.com/mchina/archive/2012/11/28/2778779.html
+	
+	mysql.port = 6931
+	＃ 修改防火墙设置，打开6931端口
+	vi /etc/sysconfig/iptables
+	-A INPUT -m state --state NEW -m tcp -p tcp --dport 6931 -j ACCEPT
+	then, service iptables restart, then iptalbes -L -n
+	
+	在CentOS 6.4版操作系统的最小安装完成后，在/etc目录下会存在一个my.cnf，需要将此文件更名为其他的名字，如：/etc/my.cnf.bak，
+	否则，该文件会干扰源码安装的MySQL的正确配置，造成无法启动。
+	
+	＃ 新增用户组
+	groupadd mysql
+	
+	＃ 新增用户
+	useradd -r -g mysql mysql // -r: just create system user, without home path.
+	vipw, change to /sbin/nologin for user mysql.
+	
+	cmake \
+	-DCMAKE_INSTALL_PREFIX=/data2/mysql56 \
+	-DMYSQL_DATADIR=/data2/mysql56/data \
+	-DMYSQL_UNIX_ADDR=/data2/mysql56/mysql.sock \
+	-DEXTRA_CHARSETS=all \
+	-DDEFAULT_CHARSET=utf8 \
+	-DDEFAULT_COLLATION=utf8_general_ci \
+	-DWITH_READLINE=1 \
+	-DWITH_EMBEDDED_SERVER=1 \
+	-DENABLED_LOCAL_INFILE=1 \
+	-DWITH_MYISAM_STORAGE_ENGINE=1 \
+	-DWITH_MEMORY_STORAGE_ENGINE=1 \
+	-DWITH_INNOBASE_STORAGE_ENGINE=1 \
+	-DMYSQL_USER=mysql \
+	-DENABLE_DOWNLOADS=1 \
+	-DMYSQL_TCP_PORT=6931
+
+	-DWITH_SSL=system \ -- 这个ssl就不需要了。因为机器上没装ssl。
+		
+	make
+	make install
+	make clean
+
+	配置Mysql:
+	chown -R mysql.mysql /data2/mysql56
+	
+	/data2/mysql56/scripts/mysql_install_db --user=mysql --basedir=/data2/mysql56 --datadir=/data2/mysql56/data
+	安装完毕后，会创建/data2/mysql56/my.cnf，并显示如下信息：
+	To start mysqld at boot time you have to copy
+	support-files/mysql.server to the right place for your system
+	
+	PLEASE REMEMBER TO SET A PASSWORD FOR THE MySQL root USER !
+	To do so, start the server , then issue the following commands:
+	
+	  /data2/mysql56/bin/mysqladmin -u root password 'new-password'
+	  /data2/mysql56/bin/mysqladmin -u root -h localhost.localdomain password 'new-password'
+	
+	Alternatively you can run after mysql started:
+	
+	  /data2/mysql56/bin/mysql_secure_installation
+	
+	which will also give you the option of removing the test
+	databases and anonymous user created by default.  This is
+	strongly recommended for production servers.
+			
+	启动数据库
+	service mysqld start
+
+	安全性MYSQL
+	/data2/mysql56/bin/mysql_secure_installation
+	
+	添加为开机运行
+	cp /data2/mysql56/support-files/mysql.server /etc/rc.d/init.d/mysqld
+	chkconfig --add mysqld
+	chkconfig --levels 245 mysqld off
+	chkconfig --list
+	
+	#让root用户只能本地登录。创建gummmysql用户，只能127.0.0.1访问，用于php程序。-需要先创建业务db。
+	useradd -r -g gumm gummmysql // -r: just create system user, without home path.
+	vipw, change to /sbin/nologin for user gummmysql.
+ 	grant select,insert,delete,update on sms_plat.* to gummmysql@'127.0.0.1' identified by '7QZ1n0u9GtWw1MQG3dl3';
+ 	flush privileges;
+ 	
+ 	Field 'phone_list' doesn't have a default value. so we need change table struct.
+	INSERT INTO `group_send_list` (`gsend_name`, `project_no`, `sms_msg`, `mt_date`, `apply_user_id`, `apply_user_name`, `apply_date`, `pj_name`, `gs_status`) VALUES ('3', '98013', '234', '20130701080000', '1', '内部用户-1', '2013-05-29 23:22:15', '测试公司-测试业务-4', 0)
+	
+7. 安装httpd
+	./configure --prefix=/data1/httpd22 --enable-so --enable-mods-shared=all
+	make
+	make install
+	echo 'AddType application/x-httpd-php .php' >> /data0/apache/conf/httpd.conf
+	
+	vi /etc/sysconfig/iptables
+	-A INPUT -m state --state NEW -m tcp -p tcp --dport 6930 -j ACCEPT
+	service iptables restart
+	
+	安全性配置：
+	#gumeng 2013-05-09. disallow list path.
+    #Options Indexes FollowSymLinks
+    Options FollowSymLinks
+    
+    #gumeng. 2013-05-09.
+    #CustomLog "logs/access_log" common
+    CustomLog "|/data1/httpd22/bin/rotatelogs /data1/httpd22/logs/access_%Y%m%d.log 86400" combined
+
+	＃ 新增用户
+	useradd -r -g gateway gummhttpd // -r: just create system user, without home path.
+	vipw, change to /sbin/nologin for user gummhttpd.
+       
+    add to /etc/rc.local.
+	
+8. php
+	tar jxvf php-5.4.14.tar.bz2
+	
+	安装第三方yum源（默认yum源里面没有这几个库文件，不能使用yum安装 mcrypt* ）
+	wget http://www.atomicorp.com/installers/atomic   #下载
+	sh ./atomic   #安装
+	yum -y install php-mcrypt libmcrypt libmcrypt-devel
+	
+	./configure --prefix=/data1/php54 --with-apxs2=/data1/httpd22/bin/apxs --with-config-file-path=/data1/php54/lib/ --with-pear=/data1/php54/lib/php --with-iconv --with-mysql=/data2/mysql56/ --with-gd --disable-debug --with-mhash --enable-mbstring --with-zlib --enable-sysvsem --enable-shmop --with-mcrypt --with-xmlrpc --enable-calendar --with-iconv --enable-bcmath  
+	make 
+	make install
+	
+	cp php.ini-development to /data1/php54/lib/php.ini
+	
+	vi php.ini, set: date.timezone=PRC
+
+9. smsd.
+	只允许本地访问smsd，这么做，将无法使用smsd-web页面提交svr代码，待今后完善吧：
+	vi /etc/sysconfig/iptables
+	-A INPUT -s 127.0.0.1 -m state --state NEW -m tcp -p tcp --dport 8611:8612 -j ACCEPT
+	-A INPUT -s 127.0.0.1 -m state --state NEW -m tcp -p tcp --dport 8621:8622 -j ACCEPT
+	-A INPUT -s 127.0.0.1 -m state --state NEW -m tcp -p tcp --dport 8631:8632 -j ACCEPT
+	service iptables restart
+	
+	安装监控 - 今后再做。
+
+10. gateway
+	cmpp安装，需要 libcrypto， 通过 yum list all | grep crypto
+	并且 yum install -y ***, 最后 ln -s /usr/lib/libcrypto.so.10 /usr/lib/libcrypto.so 才ok
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

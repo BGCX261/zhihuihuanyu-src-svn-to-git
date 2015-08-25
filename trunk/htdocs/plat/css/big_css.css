@@ -1,0 +1,27 @@
+body{ font-size:12px; color:#4f4f4f; padding:0px; margin:0px}
+.inputbiaodan tr td{ line-height:24px; padding-bottom:10px; padding-left:10px}
+a{color:#4f4f4f; text-decoration:none}
+a:hover{ text-decoration:underline}
+#top_banner{ background:url(../images/top_banner.gif); width:1003px; height:87px; margin:0 auto}
+#tit_bg{ background:url(../images/bg_01.gif); height:30px; border:#bababa 1px solid; width:961px; margin:0 auto; line-height:30px; padding:0 20px}
+#tit_bg_l{ float:left}
+#tit_bg_r{ float:right}
+#body_box{ width:1003px; margin:0 auto}
+#body_box_l{ float:left; width:205px; background:#f6f6f6; padding:5px}
+#body_box_l_clouse{ background:url(../images/bg_02.gif) repeat-x #FFFFFF; border:#bababa 1px solid; line-height:31px; padding:0 10px; margin-bottom:5px}
+#body_box_r{ float:right; width:778px; background:#f9f9f9; padding:5px}
+.both{ clear:both}
+.both_m10px{ clear:both; margin-bottom:10px}
+.cu{ font-weight:bolder}
+#inc{ background:url(../images/bg_03.gif); height:31px; text-align:center; color:#FFFFFF; line-height:31px; font-weight:bolder}
+#body_box_r_tit{background:url(../images/bg_02.gif); height:30px; padding-left:10px; line-height:30px;border:#bababa 1px solid;}
+#body_box_r_text{ padding:10px;border:#bababa 1px solid ;margin-bottom:10px}
+#body_box_r_text_result{ padding:10px;border:#bababa 1px solid ;margin-bottom:10px}
+#body_box_r_input{ line-height:24px; margin-bottom:10px; height:24px}
+#body_box_r_input_l{ width:200px; text-align:right; float:left}
+#body_box_r_input_r{ float:left; width:538px; padding-left:10px}
+.hui{ color:#aaa}
+#body_box_r_btn{ padding:20px; text-align:center}
+.red{ color:#CC0000}
+.biaoge{ border-top:#666666 1px solid;border-left:#666666 1px solid}
+.biaoge tr td{ border-right:#666666 1px solid; border-bottom:#666666 1px solid; padding:0px}

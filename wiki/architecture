@@ -1,0 +1,34 @@
+1. software list
+
+	type			port		path
+	-----------------------------------------------------------	
+	httpd2.2.24		6930		/data1/httpd22/htdocsplat/	- 短信平台
+					6934		/data1/httpd22/htdocs/i/	- 普通接口，主要是路由接口。
+					
+	mysql5.6.11		6931		/data2/mysql56/
+	ssh				6932		/var/log/sercure
+	vsftd			6933		/data2/ftp.data/
+		命令端口：6933。但是，数据端口必须6933-1=6932吗？
+		pasv_min_port=5001
+		pasv_max_port=5010
+				
+	smsd1			8611:8612	/data1/smsd/
+	smsd2			8621:8622	/data1/smsd/
+	smsd3			8631:8632	/data1/smsd/
+	-----------------------------------------------------------
+	php5.4.14					/data1/php54/
+	rsync??						/data2/rsync.data/
+	
+2. disk snapshort
+
+	Filesystem            Size  Used Avail Use% Mounted on
+	/dev/mapper/ddf1	  15G  963M   13G   7% /
+	tmpfs                 6.9G     0  6.9G   0% /dev/shm
+	/dev/mapper/ddf2	  985M   36M  899M   4% /boot
+	/dev/mapper/ddf3	  385G  195M  365G   1% /data1
+	/dev/mapper/ddf4      513G  198M  486G   1% /data2
+
+	/data0 --> /data1
+	
+3. src.path: /home/gumm/preinstall
+	

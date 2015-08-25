@@ -1,0 +1,3 @@
+*/5  *  *  *  *  /data0/data1/php/bin/php /data0/apache/gateway/withdb/log2db/bufmonitor.php > /tmp/1.log
+9    *  *  *  *  /data0/data1/php/bin/php /data0/apache/gateway/withdb/log2db/control.php kill all
+*/10  *  *  *  * /data0/data1/php/bin/php /data0/apache/gateway/withdb/log2db/control.php >> /data0/apache/gateway/withdb/log2db/control.log
